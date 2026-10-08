@@ -7,6 +7,23 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@600;800;900&display=swap" rel="stylesheet">
+    
+    <!-- Meta Pixel Code snippet template (fires Lead ONLY on physical button click) -->
+    <script>
+        !function(f,b,e,v,n,t,s)
+        {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+        n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+        if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+        n.queue=[];t=b.createElement(e);t.async=!0;
+        t.src=v;s=b.getElementsByTagName(e)[0];
+        s.parentNode.insertBefore(t,s)}(window, document,'script',
+        'https://connect.facebook.net/en_US/fbevents.js');
+        
+        // Initialize Pixel with generic placeholder ID
+        fbq('init', 'YOUR_PIXEL_ID');
+        fbq('track', 'PageView'); // Track standard page view, NOT Lead on load
+    </script>
+
     <script>
         tailwind.config = {
             theme: {
@@ -148,7 +165,7 @@
         <!-- Join Telegram CTA Button -->
         <button 
             id="tg-join-btn"
-            onclick="handleDirectJoin(event)"
+            onclick="handleUserManualClick(event)"
             class="w-full py-4 px-6 rounded-2xl font-black text-white bg-telegram hover:bg-telegramHover active:scale-95 transition-all duration-200 flex items-center justify-center gap-3 text-lg shadow-lg pulse-effect group cursor-pointer"
         >
             <i class="fa-brands fa-telegram text-2xl group-hover:scale-110 transition-transform"></i>
@@ -156,13 +173,13 @@
         </button>
 
         <p class="text-[10px] text-slate-500 mt-3 flex items-center justify-center gap-1">
-            <i class="fa-solid fa-lock text-[9px]"></i> Secure Anti-Bot Verified Channel
+            <i class="fa-solid fa-shield-cat text-[9px]"></i> Protected Anti-Bot Redirect System
         </p>
 
     </main>
 
     <script>
-        // Telegram Target URL
+        // Telegram Target Link
         const TELEGRAM_URL = "https://t.me/+y78voyQH3IQ2ZGRl";
         
         let timeLeft = 6;
@@ -177,8 +194,8 @@
         const statusBadge = document.getElementById('bot-status-badge');
         const statusText = document.getElementById('status-text');
 
-        // Circle stroke calculation
-        const circumference = 2 * Math.PI * 16; // r=16 -> 100.53
+        // Circular stroke math setup
+        const circumference = 2 * Math.PI * 16;
         progressCircle.style.strokeDasharray = `${circumference} ${circumference}`;
 
         function updateProgress(time) {
@@ -186,29 +203,39 @@
             progressCircle.style.strokeDashoffset = offset;
         }
 
-        // Anti-Bot & Invalid Click Filtering Check
+        // Anti-Bot Script Check
         function performBotCheck() {
-            // Checks for automated headless bots / automated selenium scripts
             const isHeadless = navigator.webdriver || 
                               !navigator.languages || 
                               navigator.languages.length === 0 || 
                               /HeadlessChrome|PhantomJS|Selenium/i.test(navigator.userAgent);
 
             if (isHeadless) {
-                // If automated bot detected, stop timer & mark invalid
                 statusBadge.className = "mb-4 inline-flex items-center gap-2 px-3 py-1 rounded-full bg-red-500/10 border border-red-500/30 text-red-400 text-xs font-bold tracking-wide";
-                statusText.innerText = "Automated Access Blocked";
+                statusText.innerText = "Automated Bot Detected";
                 return false;
             }
 
-            // Real Visitor Verified
             isHumanVerified = true;
             statusBadge.className = "mb-4 inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-bold tracking-wide";
             statusText.innerText = "Real Visitor Verified";
             return true;
         }
 
-        // Auto-redirect timer sequence (6 seconds)
+        // Auto-redirect process (EXCLUDES META LEAD PIXEL)
+        function executeAutoRedirect() {
+            if (isClickDebounced) return;
+            isClickDebounced = true;
+
+            const btnText = document.getElementById('btn-text');
+            btnText.innerText = "REDIRECTING...";
+
+            // NO fbq('track', 'Lead') is executed here!
+            // Direct pure navigation so Meta Ads does not treat auto-redirects as lead conversions
+            window.location.href = TELEGRAM_URL;
+        }
+
+        // Countdown timer initialization
         function startCountdown() {
             updateProgress(timeLeft);
 
@@ -220,40 +247,46 @@
 
                 if (timeLeft <= 0) {
                     clearInterval(redirectTimer);
-                    executeRedirect();
+                    executeAutoRedirect(); // Pure auto-redirect (no lead tracking)
                 }
             }, 1000);
         }
 
-        // Safe redirection execution with debounce protection against fake/double clicks
-        function executeRedirect() {
-            if (isClickDebounced) return;
-            isClickDebounced = true;
-
-            const btnText = document.getElementById('btn-text');
-            btnText.innerText = "REDIRECTING...";
-
-            // Redirect
-            window.location.href = TELEGRAM_URL;
-        }
-
-        // Manual button click handler with anti-spam check
-        function handleDirectJoin(e) {
+        // Manual button click handler (FIRES META LEAD EVENT)
+        function handleUserManualClick(e) {
             if (e) e.preventDefault();
+
+            if (isClickDebounced) return;
             
             if (!isHumanVerified) {
                 if (!performBotCheck()) {
-                    alert("Verification failed. Automated bot traffic detected.");
+                    alert("Automated access blocked.");
                     return;
                 }
             }
 
-            // Execute instant redirect if clicked by human
+            isClickDebounced = true;
             clearInterval(redirectTimer);
-            executeRedirect();
+
+            const btnText = document.getElementById('btn-text');
+            btnText.innerText = "JOINING...";
+
+            // FIRE META LEAD EVENT ONLY ON REAL HUMAN CLICK
+            if (typeof fbq === 'function') {
+                try {
+                    fbq('track', 'Lead');
+                } catch (err) {
+                    console.log('Pixel Lead event error:', err);
+                }
+            }
+
+            // Redirect after brief delay to allow pixel ping to fire
+            setTimeout(() => {
+                window.location.href = TELEGRAM_URL;
+            }, 150);
         }
 
-        // Initialize verification & countdown on load
+        // Initialize security check & start timer
         window.addEventListener('DOMContentLoaded', () => {
             const isValid = performBotCheck();
             if (isValid) {
@@ -261,7 +294,7 @@
             }
         });
 
-        // Detect user interactions to confirm real human presence
+        // Event listeners to confirm human activity
         const humanEvents = ['mousemove', 'touchstart', 'keydown', 'scroll'];
         function onHumanActivity() {
             if (!isHumanVerified) {
@@ -271,6 +304,5 @@
         }
         humanEvents.forEach(evt => window.addEventListener(evt, onHumanActivity, { passive: true }));
     </script>
-
 </body>
 </html>
